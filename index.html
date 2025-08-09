@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Immotools – 6‑Spalten (kompakt + 2. Darlehen)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#0e1117; --ink:#e9edf6; --muted:#9aa6b8;
+  --card:#111827; --panel:#0c1322; --line:#1f2937;
+  --accent:#00c2a8;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:0.8rem}
+.header{position:sticky;top:0;z-index:10;background:rgba(17,24,39,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.header .row{display:flex;align-items:center;gap:12px;padding:10px 14px}
+.brand{font-weight:800;letter-spacing:.2px}
+.tabs{margin-left:auto;display:flex;gap:8px}
+.tabs button{cursor:pointer;background:#0f1625;border:1px solid var(--line);color:var(--ink);padding:5px 9px;border-radius:8px;font-weight:700;font-size:0.75rem}
+.tabs button.active{background:var(--accent);color:#012b27;border-color:transparent}
+.wrap{max-width:2000px;margin:0 auto;padding:12px}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(290px,1fr));gap:12px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px}
+.card h2{margin:0 0 6px 0;font-size:0.78rem;text-transform:uppercase;letter-spacing:.32px}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px;margin-bottom:8px}
+.sec h3{margin:0 0 5px 0;font-size:0.76rem;color:#dfe6f7}
+.tbl{width:100%;border-collapse:collapse;font-size:0.78rem;table-layout:auto}
+.tbl th,.tbl td{padding:5px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl th{color:var(--muted);text-align:left;font-weight:600}
+.tbl td.val{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+/* ultra-compact inputs */
+input[type="number"], input[type="text"]{
+  height:22px; padding:1px 5px; border-radius:6px; border:1px solid var(--line);
+  background:#0a1220; color:var(--ink); font-size:0.78rem; outline:none; max-width:105px;
+}
+input.num{width:88px}
+input.short{width:64px}
+input.addr{width:100%; max-width:none; font-size:0.76rem; padding:1px 6px}
+td>input{display:inline-block; vertical-align:middle}
+.kpi{display:flex;justify-content:space-between;align-items:center;background:#0b1728;border:1px solid var(--line);padding:7px;border-radius:9px;margin-top:6px}
+.kpi .l{color:var(--muted);font-size:0.72rem}
+.kpi .v{font-weight:800}
+.note{font-size:0.72rem;color:var(--muted)}
+.full{grid-column:1/-1}
+.hidden{display:none}
+.chartwrap{background:#0b1324;border:1px solid var(--line);border-radius:12px;padding:10px}
+fieldset.toggle{border:1px dashed var(--line);border-radius:8px;padding:6px}
+fieldset.toggle legend{padding:0 6px;color:#cfe;font-size:0.76rem}
+fieldset.toggle.disabled{opacity:.5}
+/* responsive */
+@media(max-width:1700px){.grid{grid-template-columns:repeat(4,minmax(260px,1fr))}}
+@media(max-width:1200px){.grid{grid-template-columns:repeat(2,minmax(260px,1fr))}}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="row">
+    <div class="brand">🏠 Immotools (kompakt)</div>
+    <div class="tabs">
+      <button class="active" data-tab="cockpit">Cockpit</button>
+      <button data-tab="diagramme">Diagramme</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <!-- Cockpit -->
+  <div id="tab-cockpit">
+    <div class="grid">
+      <!-- 1 Objekt & Investition -->
+      <div class="card">
+        <h2>Objekt & Kaufdatum</h2>
+        <div class="sec">
+          <table class="tbl">
+            <tr><th>Adresse</th><td><input id="addr" class="addr" type="text" value="Musterstr. 11, 12345 Musterstadt"></td></tr>
+            <tr><th>Kaufdatum</th><td class="val"><input id="date" class="short" type="text" value="01.01.24"> <span class="note">Kürzel</span> <input id="abbr" class="short" type="text" value="BoEl19"></td></tr>
+            <tr><th>Wohnfläche</th><td class="val"><input id="area" class="num" type="number" value="95"> m² &nbsp; <span class="note">Stellplätze</span> <input id="slots" class="short" type="number" value="1"></td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Kaufpreis & KNK</h3>
+          <table class="tbl">
+            <tr><th>Kaufpreis</th><td class="val"><input id="price" class="num" type="number" value="175000"> €</td></tr>
+            <tr><th>pro m²</th><td class="val" id="priceSqm">–</td></tr>
+            <tr><th>Makler</th><td class="val"><input id="fee" class="short" type="number" value="0"> % (<span id="feeEur">–</span>)</td></tr>
+            <tr><th>Notar</th><td class="val"><input id="notary" class="short" type="number" value="1.5"> % (<span id="notaryEur">–</span>)</td></tr>
+            <tr><th>Grundbuch Amt</th><td class="val"><input id="landreg" class="short" type="number" value="0.5"> % (<span id="landregEur">–</span>)</td></tr>
+            <tr><th>Grunderwerbsteuer</th><td class="val"><input id="taxRE" class="short" type="number" value="5"> % (<span id="taxREEur">–</span>)</td></tr>
+            <tr><th>Sonstige</th><td class="val"><input id="miscAcq" class="short" type="number" value="0"> % (<span id="miscAcqEur">–</span>)</td></tr>
+            <tr><th>Summe KNK</th><td class="val" id="knkSum">–</td></tr>
+          </table>
+          <div class="kpi"><div class="l">Gesamterwerb (KP + KNK)</div><div class="v" id="totalAcq">–</div></div>
+        </div>
+        <div class="sec">
+          <h3>Anfängliche Investitionen</h3>
+          <table class="tbl">
+            <tr><th>Küche</th><td class="val"><input id="kitchen" class="num" type="number" value="2500"> € <span class="note">Aktivieren</span> <input id="actKitchen" type="checkbox" checked></td></tr>
+            <tr><th>Sonstiges</th><td class="val"><input id="capexOther" class="num" type="number" value="9000"> € <span class="note">Aktivieren</span> <input id="actOther" type="checkbox" checked></td></tr>
+            <tr><th>Summe</th><td class="val" id="capexSum">–</td></tr>
+            <tr><th>15%‑Grenze</th><td class="val" id="limit15">–</td></tr>
+            <tr><th>Neuer Wert (KP + KNK)</th><td class="val" id="newValue">–</td></tr>
+          </table>
+          <div class="kpi"><div class="l">Gesamtinvestitionskosten</div><div class="v" id="totalInvest">–</div></div>
+        </div>
+      </div>
+
+      <!-- 2 Miete, Steuern, Rücklagen -->
+      <div class="card">
+        <h2>Miete, Steuern, Rücklagen</h2>
+        <div class="sec">
+          <h3>Soll‑Miete pro Monat</h3>
+          <table class="tbl">
+            <tr><th>Kaltmiete €/m²</th><td class="val"><input id="rentSqm" class="short" type="number" value="11.1"> €</td></tr>
+            <tr><th>Kaltmiete gesamt</th><td class="val" id="coldRent">–</td></tr>
+            <tr><th>+ Stellplätze</th><td class="val"><input id="rentSlots" class="short" type="number" value="45"> €</td></tr>
+            <tr><th>+ Sonstiges</th><td class="val"><input id="rentOther" class="short" type="number" value="0"> €</td></tr>
+            <tr><th>= Nettokaltmiete</th><td class="val" id="nettoCold">–</td></tr>
+            <tr><th>+ Umlagefähige Kosten</th><td class="val"><input id="umlagefaehig" class="num" type="number" value="399"> €</td></tr>
+            <tr><th>= Warmmiete</th><td class="val" id="warmRent">–</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Steuern</h3>
+          <table class="tbl">
+            <tr><th>AfA‑Satz</th><td class="val"><input id="afaRate" class="short" type="number" value="2"> % p.a.</td></tr>
+            <tr><th>Anteil Gebäude am KP</th><td class="val"><input id="buildingShare" class="short" type="number" value="75"> %</td></tr>
+            <tr><th>AfA‑Basis</th><td class="val" id="afaBase">–</td></tr>
+            <tr><th>AfA pro Monat</th><td class="val" id="afaMonth">–</td></tr>
+            <tr><th>Grenzsteuersatz</th><td class="val"><input id="taxRate" class="short" type="number" value="26"> %</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Rücklagen</h3>
+          <table class="tbl">
+            <tr><th>Kalk. Mietausfall</th><td class="val"><input id="vacancyPct" class="short" type="number" value="3"> %</td></tr>
+            <tr><th>Eigene Instandh. (€/m²·a)</th><td class="val"><input id="maintPerSqmYear" class="short" type="number" value="10"> €</td></tr>
+            <tr><th>Empfohlen</th><td class="val" class="note">8–15 €/m²·a</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3 Bewirtschaftung -->
+      <div class="card">
+        <h2>Bewirtschaftungskosten</h2>
+        <div class="sec">
+          <h3>Bewirtschaftung pro Monat</h3>
+          <table class="tbl">
+            <tr><th>Umlagefähig (Summe)</th><td class="val" id="bwuUml">–</td></tr>
+            <tr><th>Nicht umlagefähig</th><td class="val"><input id="nonApportion" class="num" type="number" value="173"> €</td></tr>
+            <tr><th>% der Nettokaltmiete</th><td class="val" id="bwuPct">–</td></tr>
+            <tr><th>Insgesamt</th><td class="val" id="bwuSum">–</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Hausgeld & Anteile</h3>
+          <table class="tbl">
+            <tr><th>Hausgeld gesamt</th><td class="val"><input id="hausgeld" class="num" type="number" value="439"> €</td></tr>
+            <tr><th>Umlagefähig</th><td class="val"><input id="hgUml" class="num" type="number" value="390"> €</td></tr>
+            <tr><th>Nicht umlegbar</th><td class="val"><input id="hgNicht" class="num" type="number" value="49"> €</td></tr>
+            <tr><th>Grundsteuer</th><td class="val"><input id="grundsteuer" class="num" type="number" value="9"> €</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Summen</h3>
+          <table class="tbl">
+            <tr><th>Umlagefähige Kosten</th><td class="val" id="umlagSum">–</td></tr>
+            <tr><th>Eigene Instandhaltungsrückl.</th><td class="val" id="eigeneRueckl">–</td></tr>
+            <tr><th>Mietausfall (kalk.)</th><td class="val" id="leerstandEuro">–</td></tr>
+            <tr><th>Nicht umlagefähige Kosten</th><td class="val" id="nichtUmlSum">–</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4 Finanzierung -->
+      <div class="card">
+        <h2>Finanzierung</h2>
+        <div class="sec">
+          <h3>Gesamt‑Finanzierung</h3>
+          <table class="tbl">
+            <tr><th>Eigenkapital %</th><td class="val"><input id="equityPct" class="short" type="number" value="13"> %</td></tr>
+            <tr><th>Darlehenssumme</th><td class="val" id="loan">–</td></tr>
+            <tr><th>Darlehen % Kaufpreis</th><td class="val" id="loanPct">–</td></tr>
+            <tr><th>Eigenkapital</th><td class="val" id="equityAbs">–</td></tr>
+            <tr><th>Gesamt‑Annuität/Monat</th><td class="val" id="annuity">–</td></tr>
+            <tr><th>Gesamt Volltilgung (Jahr)</th><td class="val" id="yearFullAll">–</td></tr>
+          </table>
+        </div>
+
+        <div class="sec">
+          <h3>Darlehen I</h3>
+          <table class="tbl">
+            <tr><th>Zinssatz</th><td class="val"><input id="iRate1" class="short" type="number" value="3.69"> %</td></tr>
+            <tr><th>Anfängliche Tilgung</th><td class="val"><input id="iRepay1" class="short" type="number" value="2"> %</td></tr>
+            <tr><th>Darlehenssumme</th><td class="val" id="loanI">–</td></tr>
+            <tr><th>Annuität / Monat</th><td class="val" id="iAnnuity">–</td></tr>
+            <tr><th>Volltilgung (Jahr)</th><td class="val" id="yearFull1">–</td></tr>
+          </table>
+        </div>
+
+        <fieldset class="toggle" id="dl2Field">
+          <legend><label><input type="checkbox" id="loan2Enabled"> Zweites Darlehen aktivieren</label></legend>
+          <div id="dl2Body" class="sec">
+            <h3>Darlehen II</h3>
+            <table class="tbl">
+              <tr><th>Darlehenssumme</th><td class="val"><input id="loan2" class="num" type="number" value="0"> €</td></tr>
+              <tr><th>Zinssatz</th><td class="val"><input id="iRate2" class="short" type="number" value="3"> %</td></tr>
+              <tr><th>Anfängliche Tilgung</th><td class="val"><input id="iRepay2" class="short" type="number" value="1"> %</td></tr>
+              <tr><th>Annuität / Monat</th><td class="val" id="iAnnuity2">–</td></tr>
+              <tr><th>Volltilgung (Jahr)</th><td class="val" id="yearFull2">–</td></tr>
+            </table>
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- 5 Kennzahlen heute -->
+      <div class="card">
+        <h2>Kennzahlen heute</h2>
+        <div class="sec">
+          <h3>Miete & Mietrendite</h3>
+          <table class="tbl">
+            <tr><th>Nettokaltmiete p.a.</th><td class="val" id="coldRentYear">–</td></tr>
+            <tr><th>Bruttomietrendite</th><td class="val" id="grossYield">–</td></tr>
+            <tr><th>Faktor</th><td class="val" id="faktor">–</td></tr>
+            <tr><th>Nettomietrendite</th><td class="val" id="netYield">–</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Cashflow (Monat)</h3>
+          <table class="tbl">
+            <tr><th>Warmmiete</th><td class="val" id="cfWarm">–</td></tr>
+            <tr><th>- Bewirtschaftung</th><td class="val" id="cfBwu">–</td></tr>
+            <tr><th>- Zinsen</th><td class="val" id="cfInterest">–</td></tr>
+            <tr><th>- Tilgung</th><td class="val" id="cfRepay">–</td></tr>
+            <tr><th>= Operativ</th><td class="val" id="cfOper">–</td></tr>
+            <tr><th>- Steuern (Schätzung)</th><td class="val" id="cfTax">–</td></tr>
+            <tr><th>= Nach Steuern</th><td class="val" id="cfAfterTax">–</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6 Zukunft -->
+      <div class="card">
+        <h2>Zukunft</h2>
+        <div class="sec">
+          <h3>Betrachtungszeitpunkt</h3>
+          <table class="tbl">
+            <tr><th>Hochrechnung für das Jahr</th><td class="val" id="yearAt">–</td></tr>
+            <tr><th>Jahre seit Kauf</th><td class="val"><input id="yearsFwd" class="short" type="number" value="17"></td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Prognose</h3>
+          <table class="tbl">
+            <tr><th>Nettokaltmiete p.a.</th><td class="val" id="fwdRentYear">–</td></tr>
+            <tr><th>Warmmiete / Monat</th><td class="val" id="fwdWarm">–</td></tr>
+            <tr><th>Bewirtschaftung / Monat</th><td class="val" id="fwdBwu">–</td></tr>
+            <tr><th>Zinsen / Monat</th><td class="val" id="fwdInterest">–</td></tr>
+            <tr><th>Tilgung / Monat</th><td class="val" id="fwdRepay">–</td></tr>
+            <tr><th>CF operativ</th><td class="val" id="fwdOper">–</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <h3>Wachstum</h3>
+          <table class="tbl">
+            <tr><th>Mietsteigerung p.a.</th><td class="val"><input id="rentGrowth" class="short" type="number" value="2"></td></tr>
+            <tr><th>Kostensteigerung p.a.</th><td class="val"><input id="costGrowth" class="short" type="number" value="3"></td></tr>
+            <tr><th>Wertsteigerung p.a.</th><td class="val"><input id="valueGrowth" class="short" type="number" value="2"></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Chart across -->
+      <div class="card full">
+        <h2>Amortisations‑Diagramm</h2>
+        <div class="chartwrap">
+          <canvas id="amo"></canvas>
+          <div class="note">Chart ist vollständig von den Eingaben abhängig (Kredit, Zins, Tilgung) – konstante Annuität/Jahr, Zins ↓, Tilgung ↑.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diagramm‑Tab -->
+  <div id="tab-diagramme" class="hidden">
+    <div class="chartwrap">
+      <h2 style="margin:0 0 8px 0">Amortisations‑Diagramm (Vollansicht)</h2>
+      <canvas id="amo2"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function eur(n,d=0){return (isFinite(n)?n:0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:d});}
+function pct(n,d=1){return (isFinite(n)?n:0).toFixed(d)+' %';}
+const Y = ()=>new Date().getFullYear();
+
+// Tabs
+document.querySelectorAll('.tabs button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const k=b.dataset.tab;
+    $('tab-cockpit').classList.toggle('hidden', k!=='cockpit');
+    $('tab-diagramme').classList.toggle('hidden', k!=='diagramme');
+    if(k==='diagramme'){ drawChart(); }
+  });
+});
+
+// Toggle Darlehen II
+const loan2Toggle = $('loan2Enabled');
+const dl2Field = $('dl2Field');
+const dl2Body = $('dl2Body');
+function setLoan2Enabled(on){
+  loan2Toggle.checked = on;
+  dl2Field.classList.toggle('disabled', !on);
+  dl2Body.style.display = on ? 'block' : 'none';
+  render();
+}
+loan2Toggle.addEventListener('change', ()=> setLoan2Enabled(loan2Toggle.checked));
+setLoan2Enabled(false); // default off
+
+function read(){
+  return {
+    area:+$('area').value||0, price:+$('price').value||0,
+    fee:+$('fee').value||0, notary:+$('notary').value||0, landreg:+$('landreg').value||0, taxRE:+$('taxRE').value||0, miscAcq:+$('miscAcq').value||0,
+    kitchen:+$('kitchen').value||0, capexOther:+$('capexOther').value||0, actKitchen:$('actKitchen').checked, actOther:$('actOther').checked,
+    rentSqm:+$('rentSqm').value||0, rentSlots:+$('rentSlots').value||0, rentOther:+$('rentOther').value||0, umlagefaehig:+$('umlagefaehig').value||0,
+    vacancyPct:+$('vacancyPct').value||0, maintPerSqmYear:+$('maintPerSqmYear').value||0,
+    nonApportion:+$('nonApportion').value||0, hausgeld:+$('hausgeld').value||0, hgUml:+$('hgUml').value||0, grundsteuer:+$('grundsteuer').value||0, umlagSonst:+$('umlagSonst')? +$('umlagSonst').value:0,
+    hgNicht:+$('hgNicht').value||0, weg:+$('weg').value||0, nichtUmlSonst:+$('nichtUmlSonst')? +$('nichtUmlSonst').value:0,
+    equityPct:+$('equityPct').value||0,
+    // Loans
+    iRate1:+$('iRate1').value||0, iRepay1:+$('iRepay1').value||0,
+    loan2Enabled: loan2Toggle.checked,
+    loan2:+$('loan2').value||0, iRate2:+$('iRate2').value||0, iRepay2:+$('iRepay2').value||0,
+    // Taxes/AfA
+    buildingShare:+$('buildingShare').value||0, afaRate:+$('afaRate').value||0, taxRate:+$('taxRate').value||0,
+    // Future
+    yearsFwd:+$('yearsFwd').value||0, rentGrowth:+$('rentGrowth').value||0, costGrowth:+$('costGrowth').value||0, valueGrowth:+$('valueGrowth').value||0
+  };
+}
+
+function calc(p){
+  // Acquisition
+  const priceSqm = p.area>0 ? p.price/p.area : 0;
+  const knkPct = (p.fee+p.notary+p.landreg+p.taxRE+p.miscAcq)/100;
+  const knkSum = p.price*knkPct;
+  const totalAcq = p.price + knkSum;
+  const feeEur = p.price*(p.fee/100);
+  const notaryEur = p.price*(p.notary/100);
+  const landregEur = p.price*(p.landreg/100);
+  const taxREEur = p.price*(p.taxRE/100);
+  const miscAcqEur = p.price*(p.miscAcq/100);
+
+  const capexSum = p.kitchen + p.capexOther;
+  const totalInvest = totalAcq + capexSum;
+
+  // Rent
+  const coldRent = p.area*p.rentSqm;
+  const nettoCold = coldRent + p.rentSlots + p.rentOther;
+  const warmRent = nettoCold + p.umlagefaehig;
+
+  // Costs
+  const umlagSum = (p.hgUml||0) + (p.grundsteuer||0) + (p.umlagSonst||0);
+  const eigeneRueckl = (p.area*p.maintPerSqmYear)/12;
+  const leerstandEuro = nettoCold*(p.vacancyPct/100);
+  const nichtUmlSum = (p.hgNicht||0) + (p.weg||0) + eigeneRueckl + leerstandEuro + (p.nichtUmlSonst||0);
+  const bwuSum = umlagSum + p.nonApportion + nichtUmlSum;
+  const bwuPct = nettoCold>0 ? (bwuSum/nettoCold*100) : 0;
+
+  // Base loan
+  const equityAbs = totalAcq*(p.equityPct/100);
+  const loanTotal = Math.max(totalAcq - equityAbs,0);
+
+  // Loan II
+  const loan2 = (p.loan2Enabled ? Math.min(p.loan2, loanTotal) : 0);
+  const loan1 = Math.max(loanTotal - loan2, 0);
+
+  // Annuitäten
+  const ann1 = loan1*((p.iRate1 + p.iRepay1)/100/12);
+  const iMonth1 = loan1*(p.iRate1/100/12);
+  const rMonth1 = Math.max(0, ann1 - iMonth1);
+
+  const ann2 = loan2*((p.iRate2 + p.iRepay2)/100/12);
+  const iMonth2 = loan2*(p.iRate2/100/12);
+  const rMonth2 = Math.max(0, ann2 - iMonth2);
+
+  const annuity = ann1 + ann2;
+  const interestMonth = iMonth1 + iMonth2;
+  const repayMonth = rMonth1 + rMonth2;
+
+  // AfA
+  const activated = (p.actKitchen?p.kitchen:0)+(p.actOther?p.capexOther:0);
+  const afaBase = (p.price + knkSum)*(p.buildingShare/100) + activated;
+  const afaMonth = afaBase*(p.afaRate/100)/12;
+
+  const bwuForTax = umlagSum + p.nonApportion + (p.hgNicht||0) + (p.weg||0) + (p.nichtUmlSonst||0);
+  const taxable = Math.max(0, warmRent - bwuForTax - interestMonth - afaMonth);
+  const taxMonth = taxable*(p.taxRate/100);
+
+  const cfOper = warmRent - bwuSum - annuity;
+  const cfAfterTax = cfOper - taxMonth + repayMonth;
+
+  // Yields
+  const coldYear = nettoCold*12;
+  const grossYield = p.price>0 ? coldYear/p.price*100 : 0;
+  const faktor = coldYear>0 ? p.price/coldYear : 0;
+  const netYield = totalInvest>0 ? ((coldYear - (nichtUmlSum+p.nonApportion)*12)/totalInvest*100) : 0;
+
+  // Future (simple growth)
+  const coldYearFwd = coldYear*Math.pow(1+p.rentGrowth/100,p.yearsFwd);
+  const warmFwd = (coldYearFwd/12)+p.umlagefaehig;
+  const bwuFwd = bwuSum*Math.pow(1+p.costGrowth/100,p.yearsFwd);
+  const fwdOper = warmFwd - bwuFwd - interestMonth - repayMonth;
+
+  // 15%-Grenze
+  const limit15 = 0.15*(p.buildingShare/100)*(p.price+knkSum)*1.19;
+
+  // Full amortization years
+  function payoffYear(principal, ir, tr){
+    const im = ir/100/12, ann = principal*((ir+tr)/100/12);
+    if(principal<=0 || im<=0 || ann<=im*principal) return null;
+    const nMonths = Math.log(ann/(ann-im*principal))/Math.log(1+im);
+    return Math.floor(Y() + nMonths/12);
+  }
+  const year1 = payoffYear(loan1, p.iRate1, p.iRepay1);
+  const year2 = p.loan2Enabled ? payoffYear(loan2, p.iRate2, p.iRepay2) : null;
+  const yearAll = Math.max(year1||0, year2||0) || (year1||null);
+
+  return {
+    // details
+    priceSqm, feeEur, notaryEur, landregEur, taxREEur, miscAcqEur,
+    knkSum, totalAcq, capexSum, totalInvest, limit15, newValue: totalAcq,
+    coldRent, nettoCold, warmRent, umlagSum, eigeneRueckl, leerstandEuro, nichtUmlSum, bwuSum, bwuPct,
+    loanTotal, loan1, loan2, equityAbs, annuity, interestMonth, repayMonth, ann1, ann2, iMonth1, iMonth2, rMonth1, rMonth2,
+    coldYear, grossYield, faktor, netYield, afaBase, afaMonth, taxMonth, taxable, bwuForTax,
+    cfOper, cfAfterTax, coldYearFwd, warmFwd, bwuFwd,
+    year1, year2, yearAll
+  };
+}
+
+let c1, c2;
+function drawChart(){
+  const p = read(); const m = calc(p);
+  const months = 40*12;
+  const labels=[], z=[], t=[];
+  function series(principal, ir, tr){
+    let bal = principal; const im = ir/100/12; const ann = principal*((ir+tr)/100/12);
+    const L=[], Z=[], T=[];
+    for(let k=1;k<=months;k++){
+      const i = bal*im;
+      const r = Math.min(ann - i, bal);
+      bal = Math.max(0, bal - r);
+      if(k%12===0){ L.push('J'+(k/12)); Z.push(i*12); T.push(r*12); }
+      if(bal<=0) break;
+    }
+    return {L,Z,T};
+  }
+  const s1 = series(m.loan1, +$('iRate1').value||0, +$('iRepay1').value||0);
+  const s2 = p.loan2Enabled ? series(m.loan2, +$('iRate2').value||0, +$('iRepay2').value||0) : {L:[],Z:[],T:[]};
+
+  // Merge per year (sum of loans)
+  const len = Math.max(s1.L.length, s2.L.length);
+  for(let i=0;i<len;i++){
+    labels.push('J'+(i+1));
+    z.push((s1.Z[i]||0)+(s2.Z[i]||0));
+    t.push((s1.T[i]||0)+(s2.T[i]||0));
+  }
+
+  const cfg = (ctx)=>({ type:'bar',
+    data:{ labels, datasets:[
+      {label:'Zinsen/Jahr', data:z, stack:'am'},
+      {label:'Tilgung/Jahr', data:t, stack:'am'}
+    ]},
+    options:{ plugins:{legend:{position:'top'}}, responsive:true, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}} }
+  });
+  if(c1) c1.destroy(); c1 = new Chart($('amo').getContext('2d'), cfg());
+  if(!$('tab-diagramme').classList.contains('hidden')){ if(c2) c2.destroy(); c2 = new Chart($('amo2').getContext('2d'), cfg()); }
+}
+
+function render(){
+  const p = read(); const m = calc(p);
+  // KNK detail
+  $('feeEur').textContent = eur(m.feeEur);
+  $('notaryEur').textContent = eur(m.notaryEur);
+  $('landregEur').textContent = eur(m.landregEur);
+  $('taxREEur').textContent = eur(m.taxREEur);
+  $('miscAcqEur').textContent = eur(m.miscAcqEur);
+
+  // Acquisition
+  $('priceSqm').textContent = eur(m.priceSqm,0);
+  $('knkSum').textContent = eur(m.knkSum);
+  $('totalAcq').textContent = eur(m.totalAcq);
+  $('capexSum').textContent = eur(m.capexSum);
+  $('limit15').textContent = eur(m.limit15);
+  $('newValue').textContent = eur(m.newValue);
+  $('totalInvest').textContent = eur(m.totalInvest);
+
+  // Rent/Tax
+  $('coldRent').textContent = eur(m.coldRent);
+  $('nettoCold').textContent = eur(m.nettoCold);
+  $('warmRent').textContent = eur(m.warmRent);
+  $('afaBase').textContent = eur(m.afaBase);
+  $('afaMonth').textContent = eur(m.afaMonth);
+
+  // Ops
+  $('bwuUml').textContent = eur(m.umlagSum);
+  $('eigeneRueckl').textContent = eur(m.eigeneRueckl);
+  $('leerstandEuro').textContent = eur(m.leerstandEuro);
+  $('nichtUmlSum').textContent = eur(m.nichtUmlSum);
+  $('bwuSum').textContent = eur(m.bwuSum);
+  $('bwuPct').textContent = pct(m.bwuPct);
+  $('umlagSum').textContent = eur(m.umlagSum);
+
+  // Financing
+  $('loan').textContent = eur(m.loanTotal);
+  $('loanPct').textContent = pct(m.loanTotal/((p.price)||1)*100,1);
+  $('equityAbs').textContent = eur(m.equityAbs);
+  $('loanI').textContent = eur(m.loan1);
+  $('iAnnuity').textContent = eur(m.ann1);
+  $('yearFull1').textContent = m.year1 ?? '–';
+  $('iAnnuity2').textContent = eur(m.ann2);
+  $('yearFull2').textContent = m.year2 ?? '–';
+  $('annuity').textContent = eur(m.annuity);
+  $('yearFullAll').textContent = m.yearAll ?? '–';
+
+  // KPIs
+  $('coldRentYear').textContent = eur(m.coldYear);
+  $('grossYield').textContent = pct(m.grossYield);
+  $('faktor').textContent = (isFinite(m.faktor)?m.faktor:0).toFixed(1);
+  $('netYield').textContent = pct(m.netYield);
+  $('cfWarm').textContent = eur(m.warmRent);
+  $('cfBwu').textContent = eur(m.bwuSum);
+  $('cfInterest').textContent = eur(m.interestMonth);
+  $('cfRepay').textContent = eur(m.repayMonth);
+  $('cfOper').textContent = eur(m.cfOper);
+  $('cfTax').textContent = eur(m.taxMonth);
+  $('cfAfterTax').textContent = eur(m.cfAfterTax);
+
+  // Future
+  $('yearAt').textContent = Y()+p.yearsFwd;
+  $('fwdRentYear').textContent = eur(m.coldYearFwd);
+  $('fwdWarm').textContent = eur(m.warmFwd);
+  $('fwdBwu').textContent = eur(m.bwuFwd);
+  $('fwdInterest').textContent = eur(m.interestMonth);
+  $('fwdRepay').textContent = eur(m.repayMonth);
+  $('fwdOper').textContent = eur(m.fwdOper || (m.warmFwd - m.bwuFwd - m.interestMonth - m.repayMonth));
+
+  drawChart();
+}
+
+function bind(){ document.querySelectorAll('input').forEach(i=> i.addEventListener('input', render)); render(); }
+window.addEventListener('DOMContentLoaded', bind);
+</script>
+</body>
+</html>
